@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>最佳政策與價值函數</title>
+    <style>
+        td {
+            width: 50px; height: 50px;
+            border: 1px solid black;
+            text-align: center;
+            font-size: 20px;
+        }
+        .obstacle { background-color: gray; }
+        .start { background-color: red; }
+        .goal { background-color: lightgreen; }
+        .path { background-color: yellow; }
+    </style>
+</head>
+<body>
+    <h2>第 <span id="step">1</span> 步</h2>
+    <button onclick="prevStep()">上一個</button>
+    <button onclick="nextStep()">下一個</button>
+
+    <h3>最佳策略 π(s)</h3>
+    <table id="policy-table"></table>
+
+    <h3>價值函數 V(s)</h3>
+    <table id="value-table"></table>
+
+    <script>
+        const steps = {{ steps|tojson }};
+        const path = {{ path|tojson }};
+        const start = {{ start|tojson }};
+        const goal = {{ goal|tojson }};
+        const obstacles = new Set({{ obstacles|tojson }});
+
+        let currentStep = 0;
+
+        function isSame(a, b) {
+            return a && b && a[0] === b[0] && a[1] === b[1];
+        }
+
+        function render() {
+            document.getElementById("step").innerText = currentStep + 1;
+            const policyData = steps[currentStep].policy;
+            const valueData = steps[currentStep].value;
+
+            const pt = document.getElementById("policy-table");
+            const vt = document.getElementById("value-table");
+            pt.innerHTML = vt.innerHTML = "";
+
+            for (let i = 0; i < policyData.length; i++) {
+                const pr = document.createElement("tr");
+                const vr = document.createElement("tr");
+                for (let j = 0; j < policyData[i].length; j++) {
+                    const ptd = document.createElement("td");
+                    const vtd = document.createElement("td");
+
+                    const pos = [i, j];
+                    const posStr = JSON.stringify(pos);
+                    let cls = "";
+
+                    if (obstacles.has(posStr) || policyData[i][j] === "■" || valueData[i][j] === null || isNaN(valueData[i][j])) {
+                        cls = "obstacle";
+                    } else if (isSame(pos, start)) {
+                        cls = "start";
+                    } else if (isSame(pos, goal)) {
+                        cls = "goal";
+                    } else if (path.some(p => isSame(p, pos))) {
+                        cls = "path";
+                    }
+
+                    ptd.className = cls;
+                    vtd.className = cls;
+
+                    // 不顯示 ■ 或 NaN
+                    ptd.innerText = (policyData[i][j] === "■") ? "" : (policyData[i][j] || "");
+                    vtd.innerText = (valueData[i][j] === null || isNaN(valueData[i][j])) ? "" : valueData[i][j];
+
+                    pr.appendChild(ptd);
+                    vr.appendChild(vtd);
+                }
+                pt.appendChild(pr);
+                vt.appendChild(vr);
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 0) {
+                currentStep--;
+                render();
+            }
+        }
+
+        function nextStep() {
+            if (currentStep < steps.length - 1) {
+                currentStep++;
+                render();
+            }
+        }
+
+        window.onload = render;
+    </script>
+</body>
+</html>

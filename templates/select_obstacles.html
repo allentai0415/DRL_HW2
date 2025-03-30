@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>設定起點/終點/障礙</title>
+    <style>
+        td {
+            width: 40px; height: 40px;
+            border: 1px solid black;
+            text-align: center;
+            cursor: pointer;
+        }
+        .goal { background-color: lightgreen; }
+        .start { background-color: red; }
+        .obstacle { background-color: gray; }
+    </style>
+</head>
+<body>
+    <h2>點擊格子切換狀態：空 → 終點（綠）→ 起點（紅）→ 障礙物（灰）→ 空</h2>
+    <p id="block-count">障礙格數：0 / {{ n - 2 }}</p>
+    <table id="grid">
+        {% for i in range(n) %}
+        <tr>
+            {% for j in range(n) %}
+            <td data-row="{{ i }}" data-col="{{ j }}"></td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </table>
+    <br>
+    <button onclick="submit()">送出並查看策略</button>
+
+    <script>
+        const cells = document.querySelectorAll("td");
+        let obstacles = [], start = null, goal = null;
+        const maxObstacles = {{ n - 2 }};
+
+        function posEquals(a, b) {
+            return a && b && a[0] === b[0] && a[1] === b[1];
+        }
+
+        cells.forEach(cell => {
+            cell.addEventListener("click", function () {
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+                const pos = [row, col];
+
+                if (cell.classList.contains("goal")) {
+                    cell.classList.remove("goal");
+                    goal = null;
+                } else if (!goal && !posEquals(start, pos) && !cell.classList.contains("obstacle")) {
+                    cell.className = "goal";
+                    goal = pos;
+                } else if (cell.classList.contains("start")) {
+                    cell.classList.remove("start");
+                    start = null;
+                } else if (!start && !posEquals(goal, pos) && !cell.classList.contains("obstacle")) {
+                    cell.className = "start";
+                    start = pos;
+                } else if (cell.classList.contains("obstacle")) {
+                    cell.classList.remove("obstacle");
+                    obstacles = obstacles.filter(p => !(p[0] === row && p[1] === col));
+                } else if (
+                    !cell.classList.contains("start") &&
+                    !cell.classList.contains("goal") &&
+                    !posEquals(start, pos) &&
+                    !posEquals(goal, pos) &&
+                    obstacles.length < maxObstacles
+                ) {
+                    cell.className = "obstacle";
+                    obstacles.push(pos);
+                } else {
+                    alert("障礙物已達上限或格子已被指定");
+                }
+
+                document.getElementById("block-count").innerText = `障礙格數：${obstacles.length} / ${maxObstacles}`;
+            });
+        });
+
+        function submit() {
+            fetch("/submit_obstacles", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ obstacles, start, goal })
+            }).then(res => {
+                if (res.ok) location.href = "/view_matrices";
+                else res.json().then(data => alert(data.message));
+            });
+        }
+    </script>
+</body>
+</html>
